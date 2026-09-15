@@ -24,7 +24,7 @@ function Monitor({
 }) {
   const [w, h] = size;
   const screen = useMemo(
-    () => new THREE.MeshBasicMaterial({ map, toneMapped: false, color: new THREE.Color(1.25, 1.25, 1.35) }),
+    () => new THREE.MeshBasicMaterial({ map, toneMapped: false, color: new THREE.Color(0.75, 0.75, 0.85) }),
     [map],
   );
   return (

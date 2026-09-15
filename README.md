@@ -20,7 +20,8 @@ All text lives in [`src/data/content.ts`](src/data/content.ts): profile, experie
 | To add | Put the file in | Then set |
 | --- | --- | --- |
 | Resume PDF | `public/resume.pdf` | nothing — the Resume button already points there |
-| Hero background image | `public/images/hero-bg.webp` | `profile.heroImage = "/images/hero-bg.webp"` |
+| Hero portrait (transparent PNG/WebP works best) | `public/images/hero/portrait.webp` | nothing, or change `profile.heroImage` |
+| 3D model of you (`.glb`) | `public/models/amandi.glb` | nothing — it replaces the placeholder figure automatically |
 | Project cover / screenshots | `public/images/projects/…` | `cover` / `gallery` on the project |
 | Certificate image | `public/images/certificates/…` | `image` on the certificate |
 

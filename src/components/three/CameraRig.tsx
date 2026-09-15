@@ -11,15 +11,17 @@ import { accentTarget, updateAccent } from "./shared";
 type Pose = { p: [number, number, number]; t: [number, number, number] };
 
 // Where the camera sits (p) and looks (t) for each section of the page.
-const POSES: Record<SectionId | "case" | "intro", Pose> = {
+// Each pose keeps its subject on the side opposite the section's text.
+const POSES: Record<SectionId | "case" | "gallery" | "intro", Pose> = {
   intro: { p: [0, 4.2, 15], t: [0, 1.2, -6] },
   hero: { p: [-1.6, 2.25, 7.0], t: [-4.6, 2.35, -7] },
-  about: { p: [-1.7, 1.75, -3.3], t: [0.25, 1.5, -7.2] },
-  skills: { p: [1.0, 2.1, 0.7], t: [4.6, 1.75, -2.4] },
+  about: { p: [-0.2, 1.8, -2.8], t: [-1.9, 1.45, -7.2] },
+  skills: { p: [1.6, 2.1, 0.9], t: [3.2, 1.75, -2.4] },
   projects: { p: [2.7, 1.95, 1.7], t: [8, 2.05, 1.7] },
-  certificates: { p: [-2.6, 1.95, 3.2], t: [-8, 2.0, 3.2] },
+  certificates: { p: [3.5, 2.4, -2.0], t: [-1, 1.3, -6.5] },
   contact: { p: [-4.3, 2.2, -2.6], t: [-20, 0.2, -5.2] },
   case: { p: [0, 1.62, -4.75], t: [0, 1.56, -7.2] },
+  gallery: { p: [2.8, 2.0, -1.2], t: [-2, 1.4, -7] },
 };
 
 const smooth = (x: number) => x * x * (3 - 2 * x);
@@ -76,9 +78,9 @@ export default function CameraRig() {
       });
     }
 
-    if (mode === "case") {
-      vecs.p.set(...POSES.case.p);
-      vecs.t.set(...POSES.case.t);
+    if (mode !== "home") {
+      vecs.p.set(...POSES[mode].p);
+      vecs.t.set(...POSES[mode].t);
     } else {
       const y = window.scrollY;
       const vh = window.innerHeight;
@@ -117,7 +119,9 @@ export default function CameraRig() {
     look.lerp(vecs.t, ease);
     camera.lookAt(look);
 
-    accentTarget.set(mode === "case" && caseAccent ? caseAccent : sectionAccent[activeSection]);
+    accentTarget.set(
+      mode === "case" && caseAccent ? caseAccent : mode === "gallery" ? sectionAccent.certificates : sectionAccent[activeSection],
+    );
     updateAccent(dt);
   });
 

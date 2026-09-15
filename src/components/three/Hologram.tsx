@@ -2,10 +2,9 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { skillGroups } from "@/data/content";
-import { FONT_URL, accentNeon, accentNeonSoft, neon } from "./shared";
+import { accentNeon, accentNeonSoft, neon } from "./shared";
 
 const metal = new THREE.MeshStandardMaterial({ color: "#15142a", roughness: 0.3, metalness: 0.85 });
 
@@ -84,15 +83,9 @@ export default function Hologram({ position }: { position: [number, number, numb
           const r = 1.05;
           return (
             <group key={c.code} position={[Math.cos(a) * r, Math.sin(i * 1.7) * 0.25, Math.sin(a) * r]} rotation={[0, -a + Math.PI / 2, 0]}>
-              <mesh material={c.mat}>
-                <planeGeometry args={[0.36, 0.2]} />
+              <mesh material={c.mat} rotation={[0, 0, Math.PI / 4]}>
+                <octahedronGeometry args={[0.07, 0]} />
               </mesh>
-              <Text font={FONT_URL} fontSize={0.09} color="#05050a" position={[0, 0, 0.002]} anchorX="center" anchorY="middle">
-                {c.code}
-              </Text>
-              <Text font={FONT_URL} fontSize={0.09} color="#05050a" position={[0, 0, -0.002]} rotation={[0, Math.PI, 0]} anchorX="center" anchorY="middle">
-                {c.code}
-              </Text>
             </group>
           );
         })}

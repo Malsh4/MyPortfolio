@@ -12,8 +12,11 @@ export const profile = {
   github: "https://github.com/Malsh4",
   // Drop the PDF into /public/resume.pdf to enable the Resume button.
   resume: "/resume.pdf",
-  // Optional hero background image, e.g. "/images/hero-bg.webp". Leave empty to use the 3D room only.
-  heroImage: "",
+  // Hero portrait (transparent background works best). Revealed by the cursor spotlight.
+  heroImage: "/images/hero/portrait.webp",
+  // 3D model of you for the reveal before Contact. Put the file at /public/models/amandi.glb.
+  avatarModel: "/models/amandi.glb",
+  featuredProject: "battlezik",
   summary:
     "UI/UX Engineer and Frontend Developer with 1+ year of experience creating intuitive, user-centered digital experiences. Skilled in frontend development, accessibility standards, UI/UX audits, user research, and usability testing for web and mobile applications.",
 };
@@ -411,11 +414,16 @@ export type Certificate = {
   issuer: string;
   date: string;
   category: string;
+  focus: string;
   verify?: string;
+  credentialId?: string;
+  // Drop the certificate image into /public/images/certificates/ and set the path here.
   image?: string;
   highlight?: boolean;
   detail?: string;
 };
+
+const coursera = (id: string) => `https://coursera.org/verify/${id}`;
 
 export const certificates: Certificate[] = [
   {
@@ -423,17 +431,79 @@ export const certificates: Certificate[] = [
     issuer: "Google · Coursera",
     date: "May 2026",
     category: "Professional",
+    focus: "Applied AI · Prompting · AI for work",
     image: "/images/certificates/google-ai-professional.webp",
     verify: "https://coursera.org/verify/professional-cert/0EE5CN0G50QM",
+    credentialId: "0EE5CN0G50QM",
     highlight: true,
-    detail: "7 courses covering AI fundamentals, research, writing, content creation, data analysis, and app building.",
+    detail: "7 courses covering AI fundamentals, brainstorming, research, writing, content creation, data analysis, and app building.",
   },
-  { title: "AI Fundamentals", issuer: "Google · Coursera", date: "Apr 2026", category: "AI", verify: "https://coursera.org/verify/F74KGOI0XC83" },
-  { title: "AI for Brainstorming and Planning", issuer: "Google · Coursera", date: "Apr 2026", category: "AI", verify: "https://coursera.org/verify/C3K8AWGSQZHE" },
-  { title: "AI for Research and Insights", issuer: "Google · Coursera", date: "Apr 2026", category: "AI", verify: "https://coursera.org/verify/O229OXDX7ZTP" },
-  { title: "AI for Writing and Communicating", issuer: "Google · Coursera", date: "Apr 2026", category: "AI", verify: "https://coursera.org/verify/XLCEUFJYJHT1" },
-  { title: "AI for Content Creation", issuer: "Google · Coursera", date: "Apr 2026", category: "AI", verify: "https://coursera.org/verify/LOVHKSSGUPX3" },
-  { title: "AI for Data Analysis", issuer: "Google · Coursera", date: "Apr 2026", category: "AI", verify: "https://coursera.org/verify/JU8Z647ZGDUQ" },
-  { title: "AI/ML Engineer — Stage 1 & 2", issuer: "SLIIT", date: "Certified", category: "Machine Learning" },
-  { title: "Build a Machine Learning Model using Custom Vision", issuer: "Microsoft", date: "Certified", category: "Machine Learning" },
+  {
+    title: "AI Fundamentals",
+    issuer: "Google · Coursera",
+    date: "Apr 2026",
+    category: "AI",
+    focus: "AI concepts · Responsible AI",
+    image: "/images/certificates/ai-fundamentals.webp",
+    verify: coursera("F74KGOI0XC83"),
+    credentialId: "F74KGOI0XC83",
+  },
+  {
+    title: "AI for Brainstorming and Planning",
+    issuer: "Google · Coursera",
+    date: "Apr 2026",
+    category: "AI",
+    focus: "Ideation · Planning",
+    image: "/images/certificates/ai-brainstorming-planning.webp",
+    verify: coursera("C3K8AWGSQZHE"),
+    credentialId: "C3K8AWGSQZHE",
+  },
+  {
+    title: "AI for Research and Insights",
+    issuer: "Google · Coursera",
+    date: "Apr 2026",
+    category: "AI",
+    focus: "Research · Synthesis",
+    image: "/images/certificates/ai-research-insights.webp",
+    verify: coursera("O229OXDX7ZTP"),
+    credentialId: "O229OXDX7ZTP",
+  },
+  {
+    title: "AI for Writing and Communicating",
+    issuer: "Google · Coursera",
+    date: "Apr 2026",
+    category: "AI",
+    focus: "Writing · Communication",
+    image: "/images/certificates/ai-writing-communicating.webp",
+    verify: coursera("XLCEUFJYJHT1"),
+    credentialId: "XLCEUFJYJHT1",
+  },
+  {
+    title: "AI for Content Creation",
+    issuer: "Google · Coursera",
+    date: "Apr 2026",
+    category: "AI",
+    focus: "Content · Visual assets",
+    image: "/images/certificates/ai-content-creation.webp",
+    verify: coursera("LOVHKSSGUPX3"),
+    credentialId: "LOVHKSSGUPX3",
+  },
+  {
+    title: "AI for Data Analysis",
+    issuer: "Google · Coursera",
+    date: "Apr 2026",
+    category: "AI",
+    focus: "Data analysis · Insights",
+    image: "/images/certificates/ai-data-analysis.webp",
+    verify: coursera("JU8Z647ZGDUQ"),
+    credentialId: "JU8Z647ZGDUQ",
+  },
+  { title: "AI/ML Engineer — Stage 1 & 2", issuer: "SLIIT", date: "Certified", category: "Machine Learning", focus: "Machine learning · Model building" },
+  {
+    title: "Build a Machine Learning Model using Custom Vision",
+    issuer: "Microsoft",
+    date: "Certified",
+    category: "Machine Learning",
+    focus: "Computer vision · Azure Custom Vision",
+  },
 ];

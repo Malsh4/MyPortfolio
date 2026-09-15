@@ -1,81 +1,115 @@
 "use client";
 
+import { useRef, useState } from "react";
 import Section, { SectionHeading } from "../ui/Section";
+import { HudButton } from "../ui/HudButton";
+import { IconArrow, IconCap, IconShield } from "../ui/Icons";
 import { certificates } from "@/data/content";
-import { asset } from "@/lib/asset";
+import { sound } from "@/lib/sound";
 
 export default function Certificates() {
-  const featured = certificates.find((c) => c.highlight);
-  const rest = certificates.filter((c) => !c.highlight);
+  const track = useRef<HTMLUListElement>(null);
+  const [index, setIndex] = useState(0);
+  const total = certificates.length;
+
+  const step = () => {
+    const card = track.current?.firstElementChild as HTMLElement | null;
+    return card ? card.offsetWidth + 24 : 360;
+  };
+  const go = (dir: 1 | -1) => {
+    sound.click();
+    setIndex((i) => Math.min(total - 1, Math.max(0, i + dir)));
+    track.current?.scrollBy({ left: dir * step(), behavior: "smooth" });
+  };
+  const onScroll = () => {
+    const el = track.current;
+    if (!el) return;
+    setIndex(Math.min(total - 1, Math.round(el.scrollLeft / step())));
+  };
 
   return (
-    <Section id="certificates" label="Certificates" className="px-5 py-28 sm:px-10 lg:px-16 lg:py-40">
-      <div className="mx-auto max-w-7xl lg:pl-[30%]">
+    <Section id="certificates" label="Certificates" className="overflow-hidden py-28 lg:py-40">
+      {/* oversized background word */}
+      <p
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-16 select-none whitespace-nowrap font-display text-[18vw] font-black uppercase leading-none text-white/[0.025] lg:top-24"
+      >
+        Credentials · Learning
+      </p>
+
+      <div className="relative mx-auto max-w-7xl px-5 sm:px-10 lg:px-16">
         <SectionHeading code="04" title="Certificates" kicker="Always learning — most recently going deep on applied AI for research, content, and building apps." />
 
-        {featured && (
-          <article data-reveal className="hud-panel grid gap-6 p-5 sm:p-7 md:grid-cols-[1.1fr_1fr]">
-            {featured.image && (
-              <a
-                href={featured.verify ?? asset(featured.image)}
-                target="_blank"
-                rel="noreferrer"
-                data-cursor="VERIFY"
-                className="group relative block overflow-hidden border border-[var(--accent)]/30"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={asset(featured.image)}
-                  alt={`${featured.title} certificate`}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <span className="absolute inset-0 bg-gradient-to-t from-void/60 to-transparent" />
-              </a>
-            )}
-            <div className="flex flex-col">
-              <p className="font-mono text-[10px] tracking-[0.3em] text-[var(--accent)]">FEATURED · {featured.category.toUpperCase()}</p>
-              <h3 className="mt-3 font-display text-2xl font-black leading-tight text-text sm:text-3xl">{featured.title}</h3>
-              <p className="mt-2 text-sm text-dim">
-                {featured.issuer} · {featured.date}
-              </p>
-              {featured.detail && <p className="mt-4 text-sm leading-relaxed text-text/75">{featured.detail}</p>}
-              {featured.verify && (
-                <a
-                  href={featured.verify}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-auto inline-flex items-center gap-2 pt-6 font-mono text-xs tracking-[0.25em] text-[var(--accent)] hover:underline"
-                >
-                  VERIFY CREDENTIAL ↗
-                </a>
-              )}
-            </div>
-          </article>
-        )}
+        <div data-reveal className="mb-8 flex items-center justify-between gap-4 border-t border-white/10 pt-8">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              aria-label="Previous certificate"
+              onClick={() => go(-1)}
+              disabled={index === 0}
+              className="flex h-12 w-12 items-center justify-center border border-[var(--accent)]/40 bg-void/60 text-[var(--accent)] transition-all hud-cut hover:bg-[var(--accent)]/15 disabled:opacity-30"
+            >
+              <IconArrow dir="left" />
+            </button>
+            <button
+              type="button"
+              aria-label="Next certificate"
+              onClick={() => go(1)}
+              disabled={index >= total - 1}
+              className="flex h-12 w-12 items-center justify-center border border-[var(--accent)]/40 bg-void/60 text-[var(--accent)] transition-all hud-cut hover:bg-[var(--accent)]/15 disabled:opacity-30"
+            >
+              <IconArrow />
+            </button>
+          </div>
+          <HudButton href="/certificates" tag="CERTS">
+            VIEW ALL &gt;
+          </HudButton>
+        </div>
+      </div>
 
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-          {rest.map((c, i) => (
-            <li key={c.title} data-reveal data-delay={String((i % 2) * 0.08)} className="hud-panel flex flex-col p-5">
-              <div className="flex items-center justify-between gap-3 font-mono text-[10px] tracking-[0.2em]">
-                <span className="text-[var(--accent)]">{c.category.toUpperCase()}</span>
-                <span className="border border-[var(--accent)]/40 px-2 py-0.5 text-text/80">{c.date.toUpperCase()}</span>
+      <ul
+        ref={track}
+        onScroll={onScroll}
+        data-reveal
+        className="relative flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 [scrollbar-width:none] sm:px-10 lg:px-[max(4rem,calc((100vw-80rem)/2+4rem))]"
+      >
+        {certificates.map((c) => (
+          <li
+            key={c.title}
+            className="hud-panel group flex min-h-64 w-[80vw] max-w-[360px] shrink-0 snap-start flex-col p-6 transition-transform duration-500 hover:-translate-y-1 sm:w-[340px]"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center border border-[var(--accent)]/50 bg-[var(--accent)]/10 text-[var(--accent)]">
+                  <IconCap />
+                </span>
+                <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.2em] text-[var(--accent)]">
+                  <IconShield /> {c.category.toUpperCase()}
+                </span>
               </div>
-              <h3 className="mt-3 font-display text-base font-bold leading-snug text-text">{c.title}</h3>
-              <p className="mt-2 font-mono text-[10px] tracking-[0.2em] text-dim">ISSUED BY · {c.issuer.toUpperCase()}</p>
-              {c.verify && (
-                <a
-                  href={c.verify}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 font-mono text-[10px] tracking-[0.25em] text-[var(--accent)] hover:underline"
-                >
-                  VERIFY ↗
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
+              <span className="border-b border-r border-[var(--accent)]/60 px-2.5 py-1 font-mono text-[11px] text-text/85">{c.date}</span>
+            </div>
+            <h3 className="mt-5 font-display text-lg font-bold leading-snug text-text">{c.title}</h3>
+            <div className="mt-auto border-t border-white/10 pt-4">
+              <p className="font-mono text-[9px] tracking-[0.3em] text-[var(--accent)]">ISSUED BY</p>
+              <p className="mt-1.5 text-sm text-text/85">{c.issuer}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="relative mt-8 flex flex-col items-center gap-3" aria-live="polite">
+        <p className="font-display text-2xl font-black text-text/30">
+          <span className="text-[var(--accent)] glow-text">{String(index + 1).padStart(2, "0")}</span>
+          <span className="mx-2 text-base">/</span>
+          <span className="text-base">{String(total).padStart(2, "0")}</span>
+        </p>
+        <span className="relative h-px w-24 bg-white/15">
+          <span
+            className="absolute inset-y-0 left-0 bg-[var(--accent)] shadow-[0_0_8px_var(--accent)] transition-all duration-500"
+            style={{ width: `${((index + 1) / total) * 100}%` }}
+          />
+        </span>
       </div>
     </Section>
   );

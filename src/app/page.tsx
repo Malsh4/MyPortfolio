@@ -4,6 +4,7 @@ import Skills from "@/components/sections/Skills";
 import Projects from "@/components/sections/Projects";
 import Certificates from "@/components/sections/Certificates";
 import Contact from "@/components/sections/Contact";
+import RevealSection from "@/components/reveal/RevealSection";
 import HashScroll from "@/components/HashScroll";
 
 export default function Home() {
@@ -15,6 +16,7 @@ export default function Home() {
       <Skills />
       <Projects />
       <Certificates />
+      <RevealSection />
       <Contact />
     </>
   );

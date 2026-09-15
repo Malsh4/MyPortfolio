@@ -6,10 +6,10 @@ import { Environment, Grid, Lightformer, MeshReflectorMaterial, Text } from "@re
 import * as THREE from "three";
 import type { Tier } from "@/lib/store";
 import Workstation from "./Workstation";
+import PortfolioFigure from "./PortfolioFigure";
 import Hologram from "./Hologram";
 import City from "./City";
 import Particles from "./Particles";
-import { CertWall, ProjectWall } from "./Exhibits";
 import { panelTexture } from "./textures";
 import { FONT_URL, accentNeon, accentNeonSoft, neon } from "./shared";
 
@@ -62,11 +62,11 @@ function Structure({ tier }: { tier: Tier }) {
         args={[16, 18]}
         cellSize={0.5}
         cellThickness={0.6}
-        cellColor="#221b3c"
+        cellColor="#151126"
         sectionSize={2}
-        sectionThickness={1}
-        sectionColor="#4b2c72"
-        fadeDistance={28}
+        sectionThickness={0.8}
+        sectionColor="#2f1f4a"
+        fadeDistance={22}
         fadeStrength={1.4}
       />
 
@@ -184,54 +184,29 @@ function NeonSign() {
       <Text font={FONT_URL} fontSize={0.72} letterSpacing={0.12} anchorX="center" anchorY="middle" material={sign}>
         AMANDI
       </Text>
-      <Text font={FONT_URL} fontSize={0.13} letterSpacing={0.45} anchorX="center" anchorY="middle" position={[0, -0.62, 0]} material={sub}>
-        UI/UX ENGINEER · CREATIVE DEV
-      </Text>
+      <mesh position={[0, -0.6, 0]} material={sub}>
+        <boxGeometry args={[2.6, 0.018, 0.01]} />
+      </mesh>
     </group>
   );
 }
 
-const NOTES = ["PERSONAS", "INTERVIEWS", "PAIN POINTS", "JOURNEY MAP", "USER FLOWS", "INFO ARCH", "WIREFRAMES", "PROTOTYPE", "USABILITY", "A11Y AUDIT", "ITERATE", "SHIP IT"];
-const NOTE_COLORS = ["#ff3df2", "#3df5ff", "#ffb547", "#a56bff", "#5dff9d"];
-
-function ResearchBoard() {
-  const board = useMemo(() => new THREE.MeshStandardMaterial({ color: "#100f1f", roughness: 0.6, metalness: 0.4 }), []);
-  const notes = useMemo(
-    () =>
-      NOTES.map((label, i) => ({
-        label,
-        mat: new THREE.MeshStandardMaterial({
-          color: NOTE_COLORS[i % NOTE_COLORS.length],
-          emissive: NOTE_COLORS[i % NOTE_COLORS.length],
-          emissiveIntensity: 0.35,
-          roughness: 0.8,
-        }),
-        rot: (((i * 37) % 11) - 5) * 0.012,
-      })),
-    [],
-  );
+/** Minimal architectural light strips in place of wall exhibits, so the room reads calm behind content. */
+function WallLights() {
+  const amber = useMemo(() => neon("#ffb547", 0.9), []);
   return (
-    <group position={[-4.7, 2.3, -7.95]}>
-      <mesh material={board} position={[0, 0, -0.01]}>
-        <boxGeometry args={[3.0, 1.85, 0.03]} />
+    <group>
+      {[-0.6, 1.7, 4.0].map((z) => (
+        <mesh key={z} position={[7.95, 2.4, z]} material={accentNeon}>
+          <boxGeometry args={[0.03, 3.2, 0.05]} />
+        </mesh>
+      ))}
+      <mesh position={[-7.95, 2.4, 3.2]} material={amber}>
+        <boxGeometry args={[0.03, 0.03, 5]} />
       </mesh>
-      <Text font={FONT_URL} fontSize={0.09} letterSpacing={0.3} color="#8e8cab" anchorX="left" position={[-1.4, 1.05, 0]}>
-        RESEARCH_WALL // UX
-      </Text>
-      {notes.map((n, i) => {
-        const col = i % 4;
-        const row = Math.floor(i / 4);
-        return (
-          <group key={n.label} position={[-1.08 + col * 0.72, 0.56 - row * 0.56, 0.02]} rotation={[0, 0, n.rot]}>
-            <mesh material={n.mat}>
-              <planeGeometry args={[0.6, 0.44]} />
-            </mesh>
-            <Text font={FONT_URL} fontSize={0.052} color="#0a0912" anchorX="center" anchorY="middle" position={[0, 0, 0.002]}>
-              {n.label}
-            </Text>
-          </group>
-        );
-      })}
+      <mesh position={[-4.7, 2.4, -7.95]} material={accentNeonSoft}>
+        <boxGeometry args={[3, 0.02, 0.02]} />
+      </mesh>
     </group>
   );
 }
@@ -338,15 +313,15 @@ export default function Room({ tier }: { tier: Tier }) {
       <Structure tier={tier} />
       <Window />
       <NeonSign />
-      <ResearchBoard />
       <Shelf />
       <Rug />
       <Workstation />
+      <PortfolioFigure />
       <Hologram position={[4.6, 0, -2.4]} />
-      <ProjectWall />
-      <CertWall />
+      <WallLights />
       <City count={tier === "low" ? 110 : 220} traffic={tier === "low" ? 16 : 40} />
-      <Particles count={tier === "low" ? 180 : tier === "medium" ? 420 : 700} />
+      <Particles count={tier === "low" ? 100 : tier === "medium" ? 200 : 320} />
     </group>
   );
 }
+

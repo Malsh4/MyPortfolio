@@ -107,6 +107,15 @@ body {
     0 0 42px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
+/* Metallic gradient on the hero name, applied per split character so the reveal animation keeps it. */
+.hero-name .split-char {
+  background: linear-gradient(to bottom, #ffffff 10%, #e6e3f3 45%, #8d89a6 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-bottom: 0.08em;
+}
+
 .text-outline {
   -webkit-text-stroke: 1px color-mix(in srgb, var(--color-text) 55%, transparent);
   color: transparent;

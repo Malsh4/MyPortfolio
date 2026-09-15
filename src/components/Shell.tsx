@@ -35,8 +35,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   }, [quality]);
 
   useEffect(() => {
-    const isCase = pathname.includes("/projects/");
-    useApp.getState().setMode(isCase ? "case" : "home");
+    const mode = pathname.includes("/projects/") ? "case" : pathname.includes("/certificates") ? "gallery" : "home";
+    useApp.getState().setMode(mode);
     useApp.getState().setMenuOpen(false);
   }, [pathname]);
 
@@ -44,7 +44,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const slug = pathname.match(/\/projects\/([^/]+)/)?.[1];
     const project = slug ? projects.find((p) => p.slug === slug) : undefined;
-    document.documentElement.style.setProperty("--accent", project ? project.color : sectionAccent[active]);
+    const color = project ? project.color : pathname.includes("/certificates") ? sectionAccent.certificates : sectionAccent[active];
+    document.documentElement.style.setProperty("--accent", color);
   }, [active, pathname]);
 
   return (

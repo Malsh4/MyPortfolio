@@ -3,6 +3,7 @@ import type { SectionId } from "@/data/content";
 
 export type Quality = "auto" | "low" | "medium" | "high";
 export type Tier = "low" | "medium" | "high";
+export type Mode = "home" | "case" | "gallery";
 
 type State = {
   entered: boolean;
@@ -10,7 +11,10 @@ type State = {
   quality: Quality;
   tier: Tier;
   activeSection: SectionId;
-  mode: "home" | "case";
+  mode: Mode;
+  /** True while the model-reveal stage fills the screen, so the room can stop rendering. */
+  stageCover: boolean;
+  setStageCover: (v: boolean) => void;
   menuOpen: boolean;
   sceneReady: boolean;
   caseAccent: string | null;
@@ -21,7 +25,7 @@ type State = {
   setQuality: (q: Quality) => void;
   setTier: (t: Tier) => void;
   setActiveSection: (s: SectionId) => void;
-  setMode: (m: "home" | "case") => void;
+  setMode: (m: Mode) => void;
   setMenuOpen: (v: boolean) => void;
 };
 
@@ -34,6 +38,8 @@ export const useApp = create<State>((set) => ({
   mode: "home",
   menuOpen: false,
   sceneReady: false,
+  stageCover: false,
+  setStageCover: (stageCover) => set({ stageCover }),
   caseAccent: null,
   setCaseAccent: (caseAccent) => set({ caseAccent }),
   setSceneReady: (sceneReady) => set({ sceneReady }),

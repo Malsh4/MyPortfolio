@@ -18,7 +18,7 @@ export function useReveal(scope: RefObject<HTMLElement | null>, extra?: () => vo
       extra?.();
 
       el.querySelectorAll<HTMLElement>("[data-split]").forEach((h) => {
-        const split = SplitText.create(h, { type: "chars,lines", mask: "lines" });
+        const split = SplitText.create(h, { type: "chars,lines", mask: "lines", charsClass: "split-char" });
         gsap.from(split.chars, {
           yPercent: 110,
           opacity: 0,
