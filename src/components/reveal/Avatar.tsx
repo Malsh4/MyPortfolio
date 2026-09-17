@@ -133,6 +133,8 @@ export function ModelAvatar({ url, planes, onReady, withGhost }: { url: string; 
 
   useFrame((_, dt) => {
     const built = phase(reveal.p, BEATS.build);
+    // The hologram ghost appears with the scan line, not before.
+    if (ghost) ghost.visible = built > 0;
     if (built >= 1 && !waved.current) {
       waved.current = true;
       play(WAVE, true);

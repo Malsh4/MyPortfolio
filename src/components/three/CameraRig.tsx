@@ -5,7 +5,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { gsap } from "@/lib/gsap";
 import { useApp } from "@/lib/store";
-import { sectionAccent, sections, type SectionId } from "@/data/content";
+import { sectionAccent, type SectionId } from "@/data/content";
+import { BEATS, phase, reveal } from "../reveal/state";
 import { accentTarget, updateAccent } from "./shared";
 
 type Pose = { p: [number, number, number]; t: [number, number, number] };
@@ -24,7 +25,16 @@ const POSES: Record<SectionId | "case" | "gallery" | "intro", Pose> = {
   gallery: { p: [2.8, 2.0, -1.2], t: [-2, 1.4, -7] },
 };
 
+// Scroll stops in page order. "reveal" is the model interlude between Certificates and Contact.
+const STOPS = ["hero", "about", "skills", "projects", "certificates", "reveal", "contact"] as const;
+type Stop = (typeof STOPS)[number];
+
+// Reveal: the camera faces the portal on the rug (see RoomReveal) and dollies closer as she materializes.
+const REVEAL_FAR: Pose = { p: [0, 1.7, 3.4], t: [0, 1.2, -1.6] };
+const REVEAL_NEAR: Pose = { p: [0, 1.5, 2.1], t: [0, 1.1, -1.6] };
+
 const smooth = (x: number) => x * x * (3 - 2 * x);
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 /** Flies the camera between section poses as the page scrolls, with an intro dolly and pointer parallax. */
 export default function CameraRig() {
@@ -42,6 +52,7 @@ export default function CameraRig() {
       t: new THREE.Vector3(),
       kp: new THREE.Vector3(),
       kt: new THREE.Vector3(),
+      tmp: new THREE.Vector3(),
     }),
     [],
   );
@@ -68,15 +79,32 @@ export default function CameraRig() {
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
-    const { mode, activeSection, caseAccent } = useApp.getState();
+    const { mode, activeSection, caseAccent, revealActive } = useApp.getState();
 
     // Refresh section anchors periodically (cheap, and survives layout changes).
     if (frame.current++ % 30 === 0) {
-      anchors.current = sections.map((s) => {
-        const el = document.getElementById(s.id);
+      anchors.current = STOPS.map((id) => {
+        const el = document.getElementById(id);
         return el ? el.getBoundingClientRect().top + window.scrollY : Infinity;
       });
     }
+
+    const setPose = (id: Stop, target: THREE.Vector3, look: THREE.Vector3) => {
+      if (id === "reveal") {
+        const d = easeInOut(Math.min(1, reveal.p / 0.85));
+        target.set(...REVEAL_FAR.p).lerp(vecs.tmp.set(...REVEAL_NEAR.p), d);
+        look.set(...REVEAL_FAR.t).lerp(vecs.tmp.set(...REVEAL_NEAR.t), d);
+        // Scrolling on walks the camera across the room to the window wall while she stays where she is.
+        const exit = smooth(phase(reveal.p, BEATS.exit));
+        if (exit > 0) {
+          target.lerp(vecs.tmp.set(...POSES.contact.p), exit);
+          look.lerp(vecs.tmp.set(...POSES.contact.t), exit);
+        }
+      } else {
+        target.set(...POSES[id].p);
+        look.set(...POSES[id].t);
+      }
+    };
 
     if (mode !== "home") {
       vecs.p.set(...POSES[mode].p);
@@ -84,16 +112,15 @@ export default function CameraRig() {
     } else {
       const y = window.scrollY;
       const vh = window.innerHeight;
-      vecs.p.set(...POSES.hero.p);
-      vecs.t.set(...POSES.hero.t);
-      for (let i = 1; i < sections.length; i++) {
+      setPose("hero", vecs.p, vecs.t);
+      for (let i = 1; i < STOPS.length; i++) {
         const a = anchors.current[i];
         if (!Number.isFinite(a)) continue;
-        const w = smooth(THREE.MathUtils.clamp(1 - (a - y) / vh, 0, 1));
+        // Contact swings in late, so the camera holds on the model while the reveal headline is still pinned.
+        const lead = STOPS[i] === "contact" ? 0.2 : 1;
+        const w = smooth(THREE.MathUtils.clamp(1 - (a - y) / (vh * lead), 0, 1));
         if (w <= 0) break;
-        const pose = POSES[sections[i].id];
-        vecs.kp.set(...pose.p);
-        vecs.kt.set(...pose.t);
+        setPose(STOPS[i], vecs.kp, vecs.kt);
         vecs.p.lerp(vecs.kp, w);
         vecs.t.lerp(vecs.kt, w);
       }
@@ -120,7 +147,13 @@ export default function CameraRig() {
     camera.lookAt(look);
 
     accentTarget.set(
-      mode === "case" && caseAccent ? caseAccent : mode === "gallery" ? sectionAccent.certificates : sectionAccent[activeSection],
+      mode === "case" && caseAccent
+        ? caseAccent
+        : mode === "gallery"
+          ? sectionAccent.certificates
+          : mode === "home" && revealActive
+            ? "#3df5ff"
+            : sectionAccent[activeSection],
     );
     updateAccent(dt);
   });

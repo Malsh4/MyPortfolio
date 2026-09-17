@@ -8,8 +8,10 @@ export const BEATS = {
   open: [0.18, 0.32],
   rings: [0.28, 0.4],
   build: [0.38, 0.8],
-  title: 0.8,
-  cta: 0.9,
+  title: 0.5,
+  cta: 0.62,
+  // Final stretch: the headline fades in place while the camera walks to the window wall.
+  exit: [0.86, 1.0],
 } as const;
 
 /** Local 0 → 1 progress of `p` inside the range [a, b]. */

@@ -1,55 +1,22 @@
 "use client";
 
-import { Suspense, useMemo, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
+import { Suspense, useCallback, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { Tier } from "@/lib/store";
+import { useApp, type Tier } from "@/lib/store";
 import { AVATAR_HEIGHT, ModelAvatar, PlaceholderAvatar, useClipPlanes } from "./Avatar";
 import { BEATS, easeInOut, easeOut, phase, reveal } from "./state";
+
+/** Where the portal stands in the room: on the rug, in front of the desk and the neon sign. */
+export const REVEAL_SPOT = new THREE.Vector3(0, 0, -1.6);
 
 const TEAL = new THREE.Color("#3df5ff");
 const glow = (strength: number, opts: THREE.MeshBasicMaterialParameters = {}) =>
   new THREE.MeshBasicMaterial({ color: TEAL.clone().multiplyScalar(strength), toneMapped: false, ...opts });
 
-const vert = /* glsl */ `varying vec2 vUv; varying vec3 vPos; void main(){ vUv = uv; vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
+const vert = /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
 
-function Floor() {
-  const mat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        uniforms: { uLight: { value: 0 } },
-        vertexShader: vert,
-        fragmentShader: /* glsl */ `
-          uniform float uLight; varying vec2 vUv;
-          float hash(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
-          float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
-            return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y); }
-          void main(){
-            vec2 p = (vUv - 0.5) * 40.0;
-            float d = length(p);
-            float n = noise(p * 1.6) * 0.6 + noise(p * 5.0) * 0.3 + noise(p * 14.0) * 0.1;
-            float cracks = smoothstep(0.02, 0.0, abs(noise(p * 0.9) - 0.5)) * 0.35;
-            float spot = smoothstep(5.5, 0.0, d);
-            vec3 base = mix(vec3(0.05, 0.07, 0.075), vec3(0.16, 0.2, 0.2), n) - cracks * 0.12;
-            vec3 col = base * spot * uLight * 1.4 + vec3(0.0, 0.05, 0.05) * smoothstep(1.4, 0.0, d) * uLight;
-            gl_FragColor = vec4(col, 1.0);
-          }
-        `,
-      }),
-    [],
-  );
-  useFrame(() => {
-    mat.uniforms.uLight.value = easeOut(phase(reveal.p, BEATS.floor));
-  });
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} material={mat}>
-      <planeGeometry args={[40, 40]} />
-    </mesh>
-  );
-}
-
+/** Soft light shaft from the ceiling onto the spot. */
 function SpotCone() {
   const mat = useMemo(
     () =>
@@ -62,17 +29,17 @@ function SpotCone() {
         vertexShader: vert,
         fragmentShader: /* glsl */ `
           uniform float uI; varying vec2 vUv;
-          void main(){ float a = pow(1.0 - vUv.y, 0.8) * 0.06 * uI; gl_FragColor = vec4(vec3(0.7, 0.95, 0.95), a); }
+          void main(){ float a = pow(vUv.y, 1.4) * 0.07 * uI; gl_FragColor = vec4(vec3(0.7, 0.95, 1.0), a); }
         `,
       }),
     [],
   );
   useFrame(() => {
-    mat.uniforms.uI.value = phase(reveal.p, BEATS.floor);
+    mat.uniforms.uI.value = easeOut(phase(reveal.p, BEATS.floor));
   });
   return (
-    <mesh position={[0, 3.6, 0.3]} material={mat}>
-      <cylinderGeometry args={[0.25, 3.2, 7.2, 48, 1, true]} />
+    <mesh position={[0, 2.7, 0.2]} material={mat}>
+      <cylinderGeometry args={[0.3, 1.9, 5.4, 48, 1, true]} />
     </mesh>
   );
 }
@@ -172,7 +139,7 @@ function FloorRings() {
     if (dashes.current) dashes.current.rotation.z += dt * 0.6;
   });
   return (
-    <group ref={group} position={[0, 0.012, 0.25]} rotation={[-Math.PI / 2, 0, 0]}>
+    <group ref={group} position={[0, 0.025, 0.25]} rotation={[-Math.PI / 2, 0, 0]}>
       <mesh material={ring}>
         <ringGeometry args={[0.72, 0.75, 64]} />
       </mesh>
@@ -186,7 +153,7 @@ function FloorRings() {
   );
 }
 
-/** Scan ring + holo beams that ride the build line up the body. */
+/** Scan ring + holo beams that ride the build line up the body. Clip planes are in world space (floor = 0). */
 function Materializer({ planes }: { planes: ReturnType<typeof useClipPlanes> }) {
   const scan = useRef<THREE.Mesh>(null);
   const cage = useRef<THREE.Mesh>(null);
@@ -213,19 +180,17 @@ function Materializer({ planes }: { planes: ReturnType<typeof useClipPlanes> }) 
       }),
     [],
   );
-  const scanMat = useMemo(() => glow(3, { transparent: true }), []);
+  const scanMat = useMemo(() => glow(3, { transparent: true, opacity: 0.9 }), []);
 
   useFrame((state) => {
     const b = phase(reveal.p, BEATS.build);
     const y = -0.05 + b * (AVATAR_HEIGHT + 0.15);
     planes.set(y);
-    const active = b > 0 && b < 1 ? 1 : 0;
     const fadeOut = 1 - phase(reveal.p, [BEATS.build[1], BEATS.build[1] + 0.06]);
     if (scan.current) {
       scan.current.position.y = y;
-      scan.current.visible = active === 1;
+      scan.current.visible = b > 0 && b < 1;
     }
-    scanMat.opacity = 0.9;
     beams.uniforms.uH.value = y;
     beams.uniforms.uI.value = b > 0 ? fadeOut : 0;
     beams.uniforms.uTime.value = state.clock.elapsedTime;
@@ -244,41 +209,31 @@ function Materializer({ planes }: { planes: ReturnType<typeof useClipPlanes> }) 
   );
 }
 
-function Rig() {
-  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
-  const size = useThree((s) => s.size);
-  const look = useMemo(() => new THREE.Vector3(0, 1.05, 0), []);
-  const target = useMemo(() => new THREE.Vector3(), []);
-  useFrame((state, dt) => {
-    const portrait = size.width / size.height < 0.9;
-    const k = easeInOut(Math.min(1, reveal.p / 0.85));
-    const far = portrait ? 9.5 : 7.6;
-    const near = portrait ? 7.2 : 5.3;
-    target.set(state.pointer.x * 0.3, 1.45 - k * 0.1 + state.pointer.y * 0.1, far - (far - near) * k);
-    camera.position.lerp(target, 1 - Math.exp(-Math.min(dt, 0.05) * 4));
-    camera.lookAt(look);
-  });
-  return null;
-}
-
-function Scene({ modelUrl, onModelReady, tier }: { modelUrl: string | null; onModelReady: () => void; tier: Tier }) {
+/**
+ * The portal + materializing avatar, placed inside the room. Mounted once the visitor nears the reveal section,
+ * and only drawn while the reveal has started, so it never shows up in other sections.
+ */
+export default function RoomReveal({ tier }: { tier: Tier }) {
+  const modelUrl = useApp((s) => s.revealModel);
+  const root = useRef<THREE.Group>(null);
   const planes = useClipPlanes();
+  const gl = useThree((s) => s.gl);
+  gl.localClippingEnabled = true;
+  const onReady = useCallback(() => useApp.getState().setRevealModelReady(true), []);
+
+  useFrame(() => {
+    if (root.current) root.current.visible = reveal.p > 0.002;
+  });
+
+  if (modelUrl === undefined) return null;
+
+  // Group sits on the floor (y = 0), which the world-space clip planes rely on.
   return (
-    <>
-      <color attach="background" args={["#000000"]} />
-      <fog attach="fog" args={["#000000", 8, 22]} />
-      {/* Soft studio reflections so skin, hair and fabric read naturally */}
-      <Environment frames={1} resolution={128}>
-        <Lightformer form="rect" intensity={1.6} color="#fff1e4" position={[0, 3, 4]} scale={[4, 3, 1]} />
-        <Lightformer form="rect" intensity={1.2} color="#3df5ff" position={[0, 2, -3]} rotation={[0, Math.PI, 0]} scale={[3, 4, 1]} />
-        <Lightformer form="rect" intensity={0.6} color="#a56bff" position={[-4, 2, 0]} rotation={[0, Math.PI / 2, 0]} scale={[3, 3, 1]} />
-      </Environment>
-      <ambientLight intensity={0.2} />
-      <spotLight position={[0, 6.5, 2.6]} angle={0.42} penumbra={0.7} intensity={70} distance={14} decay={2} color="#eafcff" />
-      <directionalLight position={[1.4, 2.4, 4]} intensity={1.1} color="#ffe6d2" />
-      <pointLight position={[0, 1.4, -0.9]} color="#3df5ff" intensity={6} distance={4} decay={2} />
-      <pointLight position={[1.8, 1.2, 2.5]} color="#a56bff" intensity={2.5} distance={6} decay={2} />
-      <Floor />
+    <group ref={root} position={REVEAL_SPOT.toArray()} visible={false}>
+      {/* key light for skin and fabric, plus a cyan rim from the portal */}
+      <pointLight position={[0.9, 2.3, 1.6]} color="#ffe9da" intensity={9} distance={5} decay={2} />
+      <pointLight position={[-1.1, 1.6, 1.2]} color="#b9a7ff" intensity={3} distance={4} decay={2} />
+      <pointLight position={[0, 1.4, -0.9]} color="#3df5ff" intensity={5} distance={3.5} decay={2} />
       <SpotCone />
       <Portal />
       <FloorRings />
@@ -286,46 +241,12 @@ function Scene({ modelUrl, onModelReady, tier }: { modelUrl: string | null; onMo
       <group position={[0, 0, 0.25]}>
         {modelUrl ? (
           <Suspense fallback={null}>
-            <ModelAvatar url={modelUrl} planes={planes} onReady={onModelReady} withGhost={tier !== "low"} />
+            <ModelAvatar url={modelUrl} planes={planes} onReady={onReady} withGhost={tier !== "low"} />
           </Suspense>
         ) : (
           <PlaceholderAvatar planes={planes} />
         )}
       </group>
-      <Rig />
-    </>
-  );
-}
-
-export default function Stage({
-  tier,
-  active,
-  modelUrl,
-  onModelReady,
-}: {
-  tier: Tier;
-  active: boolean;
-  modelUrl: string | null;
-  onModelReady: () => void;
-}) {
-  const dpr: [number, number] = tier === "high" ? [1, 2] : tier === "medium" ? [1, 1.5] : [0.75, 1];
-  return (
-    <Canvas
-      dpr={dpr}
-      frameloop={active ? "always" : "never"}
-      gl={{ antialias: tier !== "low", powerPreference: "high-performance" }}
-      camera={{ fov: 38, near: 0.1, far: 60, position: [0, 1.5, 7.6] }}
-      onCreated={({ gl }) => {
-        gl.localClippingEnabled = true;
-        gl.toneMapping = THREE.ACESFilmicToneMapping;
-      }}
-    >
-      <Scene modelUrl={modelUrl} onModelReady={onModelReady} tier={tier} />
-      {tier !== "low" && (
-        <EffectComposer multisampling={0} enableNormalPass={false}>
-          <Bloom mipmapBlur intensity={1.1} luminanceThreshold={0.85} luminanceSmoothing={0.2} radius={0.7} />
-        </EffectComposer>
-      )}
-    </Canvas>
+    </group>
   );
 }

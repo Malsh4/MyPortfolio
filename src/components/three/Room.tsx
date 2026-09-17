@@ -6,7 +6,7 @@ import { Environment, Grid, Lightformer, MeshReflectorMaterial, Text } from "@re
 import * as THREE from "three";
 import type { Tier } from "@/lib/store";
 import Workstation from "./Workstation";
-import PortfolioFigure from "./PortfolioFigure";
+import RoomReveal from "../reveal/RoomReveal";
 import Hologram from "./Hologram";
 import City from "./City";
 import Particles from "./Particles";
@@ -316,7 +316,7 @@ export default function Room({ tier }: { tier: Tier }) {
       <Shelf />
       <Rug />
       <Workstation />
-      <PortfolioFigure />
+      <RoomReveal tier={tier} />
       <Hologram position={[4.6, 0, -2.4]} />
       <WallLights />
       <City count={tier === "low" ? 110 : 220} traffic={tier === "low" ? 16 : 40} />

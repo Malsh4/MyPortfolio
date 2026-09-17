@@ -12,9 +12,14 @@ type State = {
   tier: Tier;
   activeSection: SectionId;
   mode: Mode;
-  /** True while the model-reveal stage fills the screen, so the room can stop rendering. */
-  stageCover: boolean;
-  setStageCover: (v: boolean) => void;
+  /** True while the model-reveal section is on screen (camera parks at the portal, page scrim clears). */
+  revealActive: boolean;
+  setRevealActive: (v: boolean) => void;
+  /** URL of Amandi's GLB once the visitor nears the reveal; null = file missing (placeholder figure); undefined = not requested yet. */
+  revealModel: string | null | undefined;
+  setRevealModel: (v: string | null) => void;
+  revealModelReady: boolean;
+  setRevealModelReady: (v: boolean) => void;
   menuOpen: boolean;
   sceneReady: boolean;
   caseAccent: string | null;
@@ -38,8 +43,12 @@ export const useApp = create<State>((set) => ({
   mode: "home",
   menuOpen: false,
   sceneReady: false,
-  stageCover: false,
-  setStageCover: (stageCover) => set({ stageCover }),
+  revealActive: false,
+  setRevealActive: (revealActive) => set({ revealActive }),
+  revealModel: undefined,
+  setRevealModel: (revealModel) => set({ revealModel }),
+  revealModelReady: false,
+  setRevealModelReady: (revealModelReady) => set({ revealModelReady }),
   caseAccent: null,
   setCaseAccent: (caseAccent) => set({ caseAccent }),
   setSceneReady: (sceneReady) => set({ sceneReady }),
