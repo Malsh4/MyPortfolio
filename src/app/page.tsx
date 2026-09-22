@@ -12,6 +12,8 @@ export default function Home() {
     <>
       <HashScroll />
       <Hero />
+      {/* No content here: scrolling this stretch walks in from the door to Amandi's desk before About turns in. */}
+      <div id="entry" aria-hidden="true" className="h-[200vh]" />
       <About />
       <Skills />
       <Projects />

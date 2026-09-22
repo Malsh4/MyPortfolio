@@ -1,5 +1,8 @@
 import * as THREE from "three";
 
+/** The scene camera, shared so page overlays can pin themselves to things in the room (see RevealSection). */
+export const view: { camera: THREE.PerspectiveCamera | null } = { camera: null };
+
 /** Live accent colour of the room; lerped toward the active section's colour every frame by CameraRig. */
 export const accent = new THREE.Color("#ff3df2");
 export const accentTarget = new THREE.Color("#ff3df2");

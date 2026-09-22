@@ -8,14 +8,18 @@ import { scrollToId } from "@/lib/scroll";
 import { sound } from "@/lib/sound";
 import { profile } from "@/data/content";
 import { HudButton } from "../ui/HudButton";
-import { BEATS, phase, reveal } from "./state";
+import * as THREE from "three";
+import { view } from "../three/shared";
+import { BEATS, BUILD_SECONDS, phase, PORTAL_SECONDS, REVEAL_CAM, REVEAL_HIP, reveal } from "./state";
 
 /**
- * "Materialization" interlude before Contact. The camera settles in the room in front of the rug, where a portal
- * opens and Amandi's 3D model builds up from the feet as the visitor scrolls (see three/…/RoomReveal).
+ * "Materialization" interlude before Contact. The camera turns to the portal by the left wall; once the section is in
+ * view the portal opens and Amandi's 3D model builds up by itself (see RoomReveal), with the headline and call to
+ * action arriving alongside her. The view holds still while pinned, then the tour turns on to the window for Contact.
  */
 export default function RevealSection() {
   const section = useRef<HTMLElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLSpanElement>(null);
   const bar = useRef<HTMLSpanElement>(null);
   const entered = useApp((s) => s.entered);
@@ -48,26 +52,89 @@ export default function RevealSection() {
       ScrollTrigger.create({
         trigger: section.current,
         start: "top 60%",
-        end: "bottom 40%",
+        end: "bottom top",
         onToggle: (self) => useApp.getState().setRevealActive(self.isActive),
       });
-      const tl = gsap.timeline({
-        defaults: { ease: "none" },
-        scrollTrigger: { trigger: section.current, start: "top top", end: "bottom bottom", scrub: 1 },
-        onUpdate: () => {
-          const b = phase(reveal.p, BEATS.build);
-          if (readout.current) readout.current.textContent = String(Math.round(b * 100)).padStart(3, "0");
-          if (bar.current) bar.current.style.transform = `scaleX(${b})`;
-        },
+
+      const readoutUpdate = () => {
+        const b = phase(reveal.p, BEATS.build);
+        if (readout.current) readout.current.textContent = String(Math.round(b * 100)).padStart(3, "0");
+        if (bar.current) bar.current.style.transform = `scaleX(${b})`;
+      };
+
+      // Once the section comes into view it all plays by itself: the portal (the neon box) opens first, then the
+      // model builds up with the headline and call to action arriving alongside her. Nothing waits on scrolling.
+      const seq = gsap.timeline({ paused: true, onUpdate: readoutUpdate });
+      const B = PORTAL_SECONDS;
+      seq
+        .fromTo(reveal, { portal: 0 }, { portal: 1, duration: B, ease: "power1.inOut" }, 0)
+        .fromTo(".rv-hud", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0)
+        .fromTo(reveal, { build: 0 }, { build: 1, duration: BUILD_SECONDS, ease: "power1.inOut" }, B)
+        .fromTo(".rv-title span", { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.8, stagger: 0.12, ease: "power3.out" }, B + 0.1)
+        .fromTo(".rv-cta", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, B + 0.3)
+        // sounds: the portal snapping open, the hologram building, then she says hi as she waves
+        .call(() => sound.portal(), [], 0.05)
+        .call(() => sound.materialize(BUILD_SECONDS), [], B)
+        .call(() => sound.say("Hi! I'm Amandi.", { pitch: 1.2 }), [], B + BUILD_SECONDS + 0.2);
+
+      ScrollTrigger.create({
+        trigger: section.current,
+        start: "top 70%",
+        onEnter: () => seq.play(),
+        onLeaveBack: () => seq.pause(0),
       });
-      tl.to(reveal, { p: 1, duration: 1 }, 0)
-        .fromTo(".rv-hud", { opacity: 0 }, { opacity: 1, duration: 0.08 }, 0.02)
-        .fromTo(".rv-title span", { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.06, stagger: 0.02 }, BEATS.title)
-        .fromTo(".rv-cta", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.06 }, BEATS.cta)
-        .to([".rv-title", ".rv-cta", ".rv-hud"], { opacity: 0, duration: BEATS.exit[1] - BEATS.exit[0] }, BEATS.exit[0]);
+
+      // The headline and call to action stay attached to the model: never hidden, and when the pin releases they
+      // don't scroll away on their own. Each frame, cancel the page scroll and follow her hips on screen, so as the
+      // view turns to the window for Contact they travel off with her.
+      const hip = new THREE.Vector3();
+      const ref = new THREE.PerspectiveCamera();
+      const follow = () => {
+        const el = section.current;
+        const cam = view.camera;
+        if (!el || !stage.current) return;
+        const vh = window.innerHeight;
+        const vw = window.innerWidth;
+        const rect = el.getBoundingClientRect();
+        if (rect.top > vh || rect.bottom < -2 * vh) return;
+        const scrolledPast = Math.max(0, vh - rect.bottom);
+        let dx = 0;
+        let dy = 0;
+        let fade = 1;
+        if (cam) {
+          // where her hips are now, against where they sit when the camera faces her
+          ref.fov = cam.fov;
+          ref.aspect = cam.aspect;
+          ref.position.set(...REVEAL_CAM.p);
+          ref.lookAt(...REVEAL_CAM.t);
+          ref.updateMatrixWorld();
+          ref.updateProjectionMatrix();
+          hip.set(...REVEAL_HIP).project(ref);
+          const rx = hip.x;
+          const ry = hip.y;
+          hip.set(...REVEAL_HIP).project(cam);
+          if (hip.z < 1) {
+            dx = ((hip.x - rx) / 2) * vw;
+            dy = (-(hip.y - ry) / 2) * vh;
+            // only once she herself has left the screen, let the wide headline go too (no stray sliver at the edge)
+            fade = THREE.MathUtils.clamp(1 - (Math.abs(hip.x) - 1.05) / 0.35, 0, 1);
+          } else {
+            dx = -vw; // behind the camera: well off screen
+            fade = 0;
+          }
+        }
+        stage.current.style.transform = `translate3d(${dx.toFixed(1)}px, ${(scrolledPast + dy).toFixed(1)}px, 0)`;
+        stage.current.style.opacity = String(fade);
+        stage.current.style.visibility = fade > 0 ? "" : "hidden";
+      };
+      gsap.ticker.add(follow);
+
       return () => {
+        gsap.ticker.remove(follow);
+        seq.kill();
         useApp.getState().setRevealActive(false);
-        reveal.p = 0;
+        reveal.portal = 0;
+        reveal.build = 0;
       };
     },
     { scope: section, dependencies: [entered] },
@@ -76,8 +143,8 @@ export default function RevealSection() {
   const loading = modelUrl === undefined || (modelUrl !== null && !modelReady);
 
   return (
-    <section ref={section} id="reveal" aria-label="Meet Amandi in 3D" className="relative h-[300vh]" style={{ "--accent": "#3df5ff" } as React.CSSProperties}>
-      <div className="sticky top-0 h-[100svh] overflow-hidden">
+    <section ref={section} id="reveal" aria-label="Meet Amandi in 3D" className="relative h-[150vh]" style={{ "--accent": "#3df5ff" } as React.CSSProperties}>
+      <div ref={stage} className="sticky top-0 h-[100svh] overflow-hidden">
         {/* soft vignette so the room frames the portal without competing with the text */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(4,4,10,0.55)_100%)]" aria-hidden="true" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-void/70 to-transparent lg:h-1/4" aria-hidden="true" />
@@ -109,8 +176,8 @@ export default function RevealSection() {
           )}
         </div>
 
-        {/* headline + call to action */}
-        <div className="absolute inset-x-0 bottom-[8%] flex flex-col items-center px-5 text-center">
+        {/* headline + call to action, sitting at the model's hips */}
+        <div className="absolute inset-x-0 top-[50%] flex flex-col items-center px-5 text-center sm:top-[52%]">
           <h2 className="rv-title font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-text [text-shadow:0_4px_30px_rgba(0,0,0,0.9)] sm:text-5xl lg:text-6xl">
             <span className="block overflow-hidden">
               <span className="inline-block">The human</span>

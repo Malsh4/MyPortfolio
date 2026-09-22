@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
-import { useApp, type Quality } from "@/lib/store";
+import { useApp } from "@/lib/store";
 import { sound } from "@/lib/sound";
 import { scrollToId, scrollToTop } from "@/lib/scroll";
 import { profile, sections } from "@/data/content";
@@ -51,7 +51,6 @@ export default function Hud() {
       </header>
 
       {mode === "home" && <SectionRail />}
-      <QualityPicker />
       <SoundToggle />
       <Menu />
     </div>
@@ -116,43 +115,6 @@ function SectionRail() {
         })}
       </ul>
     </nav>
-  );
-}
-
-function QualityPicker() {
-  const quality = useApp((s) => s.quality);
-  const tier = useApp((s) => s.tier);
-  const setQuality = useApp((s) => s.setQuality);
-  const options: Quality[] = ["auto", "low", "medium", "high"];
-  return (
-    <div className="hud-item fixed bottom-5 left-5 z-40 hidden sm:block sm:bottom-6 sm:left-8">
-      <p className="mb-2 font-mono text-[9px] tracking-[0.3em] text-dim">
-        VISUAL_PRESET · <span className="text-[var(--accent)]">{tier.toUpperCase()}</span>
-      </p>
-      <div role="radiogroup" aria-label="3D quality" className="flex gap-1">
-        {options.map((o) => (
-          <button
-            key={o}
-            type="button"
-            role="radio"
-            aria-checked={quality === o}
-            onClick={() => {
-              setQuality(o);
-              try {
-                localStorage.setItem("quality", o);
-              } catch {}
-            }}
-            className={`border px-2 py-1 font-mono text-[9px] tracking-[0.2em] transition-colors ${
-              quality === o
-                ? "border-[var(--accent)] bg-[var(--accent)]/15 text-text"
-                : "border-white/10 text-dim hover:border-white/30 hover:text-text"
-            }`}
-          >
-            {o === "medium" ? "MED" : o.toUpperCase()}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -255,6 +217,9 @@ function Menu() {
                 type="button"
                 tabIndex={menuOpen ? 0 : -1}
                 onClick={() => go(s.id)}
+                // read the section name aloud on hover / keyboard focus
+                onMouseEnter={() => sound.say(s.label)}
+                onFocus={() => sound.say(s.label)}
                 className="menu-link group flex items-baseline gap-4 py-1 text-left sm:gap-8"
               >
                 <span className="font-mono text-xs text-[var(--accent)]">{s.code}</span>

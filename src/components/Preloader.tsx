@@ -18,6 +18,29 @@ export default function Preloader() {
   const setEntered = useApp((s) => s.setEntered);
   const setSoundOn = useApp((s) => s.setSoundOn);
 
+  // Loading sounds: browsers keep audio locked until the first click or key press, so unlock on that gesture;
+  // from then on the bar ticks as it fills (a visitor who never interacts simply hears nothing yet).
+  useEffect(() => {
+    const unlock = () => sound.unlock();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+  const lastTick = useRef(0);
+  useEffect(() => {
+    const step = Math.floor(progress / 10);
+    if (step > lastTick.current) {
+      lastTick.current = step;
+      sound.loadTick(progress);
+    }
+  }, [progress]);
+  useEffect(() => {
+    if (stage === "ready") sound.loadReady();
+  }, [stage]);
+
   // Progress: a minimum reveal time, gated on fonts and the first rendered 3D frame.
   useEffect(() => {
     const state = { p: 0 };

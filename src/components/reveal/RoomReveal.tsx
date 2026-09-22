@@ -5,10 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useApp, type Tier } from "@/lib/store";
 import { AVATAR_HEIGHT, ModelAvatar, PlaceholderAvatar, useClipPlanes } from "./Avatar";
-import { BEATS, easeInOut, easeOut, phase, reveal } from "./state";
-
-/** Where the portal stands in the room: on the rug, in front of the desk and the neon sign. */
-export const REVEAL_SPOT = new THREE.Vector3(0, 0, -1.6);
+import { BEATS, easeInOut, easeOut, phase, reveal, REVEAL_SPOT, REVEAL_YAW } from "./state";
 
 const TEAL = new THREE.Color("#3df5ff");
 const glow = (strength: number, opts: THREE.MeshBasicMaterialParameters = {}) =>
@@ -185,8 +182,9 @@ function Materializer({ planes }: { planes: ReturnType<typeof useClipPlanes> }) 
   useFrame((state) => {
     const b = phase(reveal.p, BEATS.build);
     const y = -0.05 + b * (AVATAR_HEIGHT + 0.15);
-    planes.set(y);
-    const fadeOut = 1 - phase(reveal.p, [BEATS.build[1], BEATS.build[1] + 0.06]);
+    // Once she is fully built, push the planes out of the way so nothing is left clipped.
+    planes.set(b >= 1 ? 1e4 : y);
+    const fadeOut = 1 - phase(b, [0.9, 1]);
     if (scan.current) {
       scan.current.position.y = y;
       scan.current.visible = b > 0 && b < 1;
@@ -210,8 +208,8 @@ function Materializer({ planes }: { planes: ReturnType<typeof useClipPlanes> }) 
 }
 
 /**
- * The portal + materializing avatar, placed inside the room. Mounted once the visitor nears the reveal section,
- * and only drawn while the reveal has started, so it never shows up in other sections.
+ * The portal + materializing avatar, standing on the rug in the front-left corner of the room. Mounted once the
+ * visitor nears the reveal section, and only drawn while the reveal has started, so it never shows up elsewhere.
  */
 export default function RoomReveal({ tier }: { tier: Tier }) {
   const modelUrl = useApp((s) => s.revealModel);
@@ -229,7 +227,7 @@ export default function RoomReveal({ tier }: { tier: Tier }) {
 
   // Group sits on the floor (y = 0), which the world-space clip planes rely on.
   return (
-    <group ref={root} position={REVEAL_SPOT.toArray()} visible={false}>
+    <group ref={root} position={REVEAL_SPOT} rotation={[0, REVEAL_YAW, 0]} visible={false}>
       {/* key light for skin and fabric, plus a cyan rim from the portal */}
       <pointLight position={[0.9, 2.3, 1.6]} color="#ffe9da" intensity={9} distance={5} decay={2} />
       <pointLight position={[-1.1, 1.6, 1.2]} color="#b9a7ff" intensity={3} distance={4} decay={2} />

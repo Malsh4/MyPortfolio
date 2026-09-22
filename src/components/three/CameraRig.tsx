@@ -3,72 +3,94 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { gsap } from "@/lib/gsap";
 import { useApp } from "@/lib/store";
-import { sectionAccent, type SectionId } from "@/data/content";
-import { BEATS, phase, reveal } from "../reveal/state";
-import { accentTarget, updateAccent } from "./shared";
+import { sectionAccent } from "@/data/content";
+import { REVEAL_CAM, TOUR_CENTER } from "../reveal/state";
+import { accentTarget, updateAccent, view } from "./shared";
 
 type Pose = { p: [number, number, number]; t: [number, number, number] };
 
-// Where the camera sits (p) and looks (t) for each section of the page.
-// Each pose keeps its subject on the side opposite the section's text.
-const POSES: Record<SectionId | "case" | "gallery" | "intro", Pose> = {
-  intro: { p: [0, 4.2, 15], t: [0, 1.2, -6] },
-  hero: { p: [-1.6, 2.25, 7.0], t: [-4.6, 2.35, -7] },
-  about: { p: [-0.2, 1.8, -2.8], t: [-1.9, 1.45, -7.2] },
-  skills: { p: [1.6, 2.1, 0.9], t: [3.2, 1.75, -2.4] },
-  projects: { p: [2.7, 1.95, 1.7], t: [8, 2.05, 1.7] },
-  certificates: { p: [3.5, 2.4, -2.0], t: [-1, 1.3, -6.5] },
-  contact: { p: [-4.3, 2.2, -2.6], t: [-20, 0.2, -5.2] },
-  case: { p: [0, 1.62, -4.75], t: [0, 1.56, -7.2] },
-  gallery: { p: [2.8, 2.0, -1.2], t: [-2, 1.4, -7] },
+// A pose facing `deg` degrees clockwise from the back wall, standing at `p`.
+const facing = (deg: number, pitch = -0.04, p: [number, number, number] = TOUR_CENTER): Pose => {
+  const r = (deg * Math.PI) / 180;
+  return { p, t: [p[0] + Math.sin(r) * 6, p[1] + Math.sin(pitch) * 6, p[2] - Math.cos(r) * 6] };
 };
 
-// Scroll stops in page order. "reveal" is the model interlude between Certificates and Contact.
-const STOPS = ["hero", "about", "skills", "projects", "certificates", "reveal", "contact"] as const;
-type Stop = (typeof STOPS)[number];
+/** Standing outside the closed front door, where the tour starts (hidden behind the hero). */
+const OUTSIDE_POSE: Pose = facing(0, -0.02, [0, 2.0, 9]);
 
-// Reveal: the camera faces the portal on the rug (see RoomReveal) and dollies closer as she materializes.
-const REVEAL_FAR: Pose = { p: [0, 1.7, 3.4], t: [0, 1.2, -1.6] };
-const REVEAL_NEAR: Pose = { p: [0, 1.5, 2.1], t: [0, 1.1, -1.6] };
+// Fixed poses for the other routes.
+const ROUTE_POSES = {
+  case: { p: [0, 1.62, -4.75], t: [0, 1.56, -7.2] },
+  gallery: { p: [2.8, 2.0, -1.2], t: [-2, 1.4, -7] },
+} satisfies Record<string, Pose>;
 
+const top = (id: string) => {
+  const el = document.getElementById(id);
+  return el ? el.getBoundingClientRect().top + window.scrollY : Infinity;
+};
+
+/**
+ * The home page is a scroll-driven tour of the room. Each stop has a pose and the scroll position (`at`) where the
+ * camera should have fully arrived; it travels there over the stretch since the previous stop (at most one screen,
+ * unless `wholeLeg` spreads it over the full stretch, as for walking in while the hero scrolls away).
+ * Once inside, the camera keeps turning right: the desk and monitors, the shelf corner (about), the hologram (skills),
+ * the project screens (projects), past the door to the credential wall (certificates), the portal (reveal), and
+ * finally the window (contact). The front door opens and closes with the first leg (see Door in Room).
+ */
+const TOUR: { pose: Pose; at: (vh: number) => number; wholeLeg?: boolean }[] = [
+  { pose: OUTSIDE_POSE, at: () => 0 },
+  // as the hero scrolls away: through the door and a few steps in, already close to the desk
+  { pose: facing(0, -0.02, [0, 2.05, 1.8]), at: () => top("entry"), wholeLeg: true },
+  // across the empty stretch before About: up to the desk, AMANDI sign and monitors, arriving just as the empty
+  // stretch ends (About's top reaches the bottom of the screen)
+  { pose: facing(0, 0.07, [0, 1.9, -2.8]), at: (vh) => top("about") - vh },
+  // then turn right as About comes in
+  { pose: facing(45), at: () => top("about") },
+  { pose: facing(78), at: () => top("skills") },
+  // the project screens right of the door, then the credential wall left of it, framed the same way: the wall
+  // sits a little right of centre, clear of the section text on the left
+  { pose: facing(146, 0.02, [0.9, 1.9, 0.9]), at: () => top("projects") },
+  { pose: facing(198, 0.02, [-0.85, 1.9, 0.9]), at: () => top("certificates") },
+  { pose: REVEAL_CAM, at: () => top("reveal") },
+  // turns to the window as Contact comes up, finishing at the very end of the page; the model's headline travels
+  // off with her (see RevealSection)
+  { pose: facing(310, -0.02), at: (vh) => document.documentElement.scrollHeight - vh },
+];
+
+// Each stop as a heading, so blending between stops turns the camera rather than sliding its look-at point.
+// Yaw is measured clockwise from facing the back wall and unwrapped so it only grows along the tour.
+type Heading = { p: THREE.Vector3; yaw: number; pitch: number };
+const HEADINGS: Heading[] = (() => {
+  let prev = -Infinity;
+  return TOUR.map(({ pose: { p, t } }) => {
+    const dx = t[0] - p[0];
+    const dz = t[2] - p[2];
+    let yaw = Math.atan2(dx, -dz);
+    while (yaw < prev - 0.35) yaw += Math.PI * 2; // keep turning right, never back
+    prev = yaw;
+    return { p: new THREE.Vector3(...p), yaw, pitch: Math.atan2(t[1] - p[1], Math.hypot(dx, dz)) };
+  });
+})();
+
+const LOOK_DISTANCE = 6;
 const smooth = (x: number) => x * x * (3 - 2 * x);
-const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-/** Flies the camera between section poses as the page scrolls, with an intro dolly and pointer parallax. */
+/** Moves the camera along the room tour as the page scrolls; the pointer only nudges where it looks. */
 export default function CameraRig() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const size = useThree((s) => s.size);
-  const entered = useApp((s) => s.entered);
 
-  const intro = useRef({ v: 0 });
   const anchors = useRef<number[]>([]);
   const frame = useRef(0);
-  const look = useMemo(() => new THREE.Vector3(...POSES.intro.t), []);
-  const vecs = useMemo(
-    () => ({
-      p: new THREE.Vector3(),
-      t: new THREE.Vector3(),
-      kp: new THREE.Vector3(),
-      kt: new THREE.Vector3(),
-      tmp: new THREE.Vector3(),
-    }),
-    [],
-  );
+  const look = useMemo(() => new THREE.Vector3(...OUTSIDE_POSE.t), []);
+  const vecs = useMemo(() => ({ p: new THREE.Vector3(), t: new THREE.Vector3() }), []);
 
   useEffect(() => {
-    camera.position.set(...POSES.intro.p);
+    view.camera = camera;
+    camera.position.set(...OUTSIDE_POSE.p);
     camera.lookAt(look);
   }, [camera, look]);
-
-  useEffect(() => {
-    if (!entered) return;
-    const tween = gsap.to(intro.current, { v: 1, duration: 3.2, ease: "power3.inOut", delay: 0.2 });
-    return () => {
-      tween.kill();
-    };
-  }, [entered]);
 
   // Wider lens on portrait screens so the room still reads on phones.
   useEffect(() => {
@@ -80,68 +102,39 @@ export default function CameraRig() {
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
     const { mode, activeSection, caseAccent, revealActive } = useApp.getState();
+    const vh = window.innerHeight;
 
-    // Refresh section anchors periodically (cheap, and survives layout changes).
-    if (frame.current++ % 30 === 0) {
-      anchors.current = STOPS.map((id) => {
-        const el = document.getElementById(id);
-        return el ? el.getBoundingClientRect().top + window.scrollY : Infinity;
-      });
-    }
-
-    const setPose = (id: Stop, target: THREE.Vector3, look: THREE.Vector3) => {
-      if (id === "reveal") {
-        const d = easeInOut(Math.min(1, reveal.p / 0.85));
-        target.set(...REVEAL_FAR.p).lerp(vecs.tmp.set(...REVEAL_NEAR.p), d);
-        look.set(...REVEAL_FAR.t).lerp(vecs.tmp.set(...REVEAL_NEAR.t), d);
-        // Scrolling on walks the camera across the room to the window wall while she stays where she is.
-        const exit = smooth(phase(reveal.p, BEATS.exit));
-        if (exit > 0) {
-          target.lerp(vecs.tmp.set(...POSES.contact.p), exit);
-          look.lerp(vecs.tmp.set(...POSES.contact.t), exit);
-        }
-      } else {
-        target.set(...POSES[id].p);
-        look.set(...POSES[id].t);
-      }
-    };
+    // Refresh stop positions periodically (cheap, and survives layout changes).
+    if (frame.current++ % 30 === 0) anchors.current = TOUR.map((s) => s.at(vh));
 
     if (mode !== "home") {
-      vecs.p.set(...POSES[mode].p);
-      vecs.t.set(...POSES[mode].t);
+      vecs.p.set(...ROUTE_POSES[mode].p);
+      vecs.t.set(...ROUTE_POSES[mode].t);
     } else {
       const y = window.scrollY;
-      const vh = window.innerHeight;
-      setPose("hero", vecs.p, vecs.t);
-      for (let i = 1; i < STOPS.length; i++) {
+      vecs.p.copy(HEADINGS[0].p);
+      let yaw = HEADINGS[0].yaw;
+      let pitch = HEADINGS[0].pitch;
+      for (let i = 1; i < TOUR.length; i++) {
         const a = anchors.current[i];
         if (!Number.isFinite(a)) continue;
-        // Contact swings in late, so the camera holds on the model while the reveal headline is still pinned.
-        const lead = STOPS[i] === "contact" ? 0.2 : 1;
-        const w = smooth(THREE.MathUtils.clamp(1 - (a - y) / (vh * lead), 0, 1));
+        const since = a - (anchors.current[i - 1] ?? 0);
+        const span = Math.max(1, TOUR[i].wholeLeg ? since : Math.min(vh, since));
+        const w = smooth(THREE.MathUtils.clamp(1 - (a - y) / span, 0, 1));
         if (w <= 0) break;
-        setPose(STOPS[i], vecs.kp, vecs.kt);
-        vecs.p.lerp(vecs.kp, w);
-        vecs.t.lerp(vecs.kt, w);
+        const h = HEADINGS[i];
+        vecs.p.lerp(h.p, w);
+        yaw += (h.yaw - yaw) * w;
+        pitch += (h.pitch - pitch) * w;
       }
+      vecs.t.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(LOOK_DISTANCE).add(vecs.p);
     }
 
-    // Intro dolly from outside the room.
-    const k = intro.current.v;
-    if (k < 1) {
-      vecs.kp.set(...POSES.intro.p);
-      vecs.kt.set(...POSES.intro.t);
-      vecs.p.lerp(vecs.kp, 1 - k);
-      vecs.t.lerp(vecs.kt, 1 - k);
-    }
+    // The pointer only turns the view a touch; the visitor stays standing where they are.
+    vecs.t.x += state.pointer.x * 0.18;
+    vecs.t.y += state.pointer.y * 0.1;
 
-    // Pointer parallax.
-    vecs.p.x += state.pointer.x * 0.28;
-    vecs.p.y += state.pointer.y * 0.16;
-    vecs.t.x += state.pointer.x * 0.35;
-    vecs.t.y += state.pointer.y * 0.2;
-
-    const ease = 1 - Math.exp(-dt * (k < 1 ? 8 : 3.2));
+    const ease = 1 - Math.exp(-dt * 3.2);
     camera.position.lerp(vecs.p, ease);
     look.lerp(vecs.t, ease);
     camera.lookAt(look);

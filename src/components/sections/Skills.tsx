@@ -1,6 +1,7 @@
 "use client";
 
 import Section, { SectionHeading } from "../ui/Section";
+import { sound } from "@/lib/sound";
 import { skillGroups } from "@/data/content";
 
 export default function Skills() {
@@ -22,7 +23,8 @@ export default function Skills() {
               key={g.code}
               data-reveal
               data-delay={String(i * 0.07)}
-              className={`hud-panel group p-6 transition-transform duration-500 hover:-translate-y-1 ${i === skillGroups.length - 1 ? "sm:col-span-2" : ""}`}
+              onMouseEnter={() => sound.cardHover()}
+              className={`hud-panel hud-hover group p-6 ${i === skillGroups.length - 1 ? "sm:col-span-2" : ""}`}
               style={{ "--accent": g.color } as React.CSSProperties}
             >
               <div className="flex items-start justify-between gap-4">

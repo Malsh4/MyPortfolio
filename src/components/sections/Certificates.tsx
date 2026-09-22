@@ -89,7 +89,8 @@ export default function Certificates() {
           {certificates.map((c) => (
             <li
               key={c.title}
-              className="hud-panel group flex min-h-64 shrink-0 basis-full snap-start flex-col p-6 transition-transform duration-500 hover:-translate-y-1 sm:basis-[calc((100%-2rem)/2)] lg:basis-[calc((100%-4rem)/3)]"
+              onMouseEnter={() => sound.cardHover()}
+              className="hud-panel hud-hover group flex min-h-64 shrink-0 basis-full snap-start flex-col p-6 sm:basis-[calc((100%-2rem)/2)] lg:basis-[calc((100%-4rem)/3)]"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">

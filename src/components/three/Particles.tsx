@@ -12,9 +12,9 @@ export default function Particles({ count = 500 }: { count?: number }) {
     const pos = new Float32Array(count * 3);
     const seed = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 15;
+      pos[i * 3] = (Math.random() - 0.5) * 11;
       pos[i * 3 + 1] = Math.random() * 5.2;
-      pos[i * 3 + 2] = -7.5 + Math.random() * 16;
+      pos[i * 3 + 2] = -7 + Math.random() * 12;
       seed[i] = Math.random();
     }
     const g = new THREE.BufferGeometry();

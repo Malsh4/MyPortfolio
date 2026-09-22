@@ -33,7 +33,8 @@ function Lightbox({ cert, onClose }: { cert: Certificate; onClose: () => void })
           ref={close}
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 z-10 border border-[var(--accent)]/50 bg-void/80 px-3 py-1.5 font-mono text-[10px] tracking-[0.3em] text-text hover:bg-[var(--accent)]/20"
+          data-cursor="CLOSE"
+          className="absolute right-4 top-4 z-10 border border-[var(--accent)]/50 bg-void/80 px-3 py-1.5 font-mono text-[10px] tracking-[0.3em] text-text transition-colors hover:border-[var(--accent)] hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] focus-visible:border-[var(--accent)] focus-visible:text-[var(--accent)]"
         >
           CLOSE ✕
         </button>
@@ -52,7 +53,8 @@ function Lightbox({ cert, onClose }: { cert: Certificate; onClose: () => void })
 
 function CertCard({ c, i, onExpand }: { c: Certificate; i: number; onExpand: (c: Certificate) => void }) {
   return (
-    <article data-reveal data-delay={String((i % 2) * 0.08)} className="hud-panel flex flex-col p-6 sm:p-8">
+    // Five rows on a subgrid, so cards side by side line up row for row even when one title wraps further.
+    <article data-reveal data-delay={String((i % 2) * 0.08)} onMouseEnter={() => sound.cardHover()} className="hud-panel row-span-5 grid grid-rows-subgrid gap-0 p-6 sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <span className="flex items-center gap-2 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 font-mono text-[10px] tracking-[0.3em] text-[var(--accent)]">
           <IconShield /> {c.category.toUpperCase()}
@@ -81,10 +83,10 @@ function CertCard({ c, i, onExpand }: { c: Certificate; i: number; onExpand: (c:
         {c.image ? (
           <button type="button" onClick={() => onExpand(c)} data-cursor="VIEW" className="block w-full" aria-label={`View ${c.title}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={asset(c.image)} alt={`${c.title} certificate`} loading="lazy" className="mx-auto w-full max-w-lg shadow-[0_20px_60px_-20px_rgba(0,0,0,0.9)] transition-transform duration-500 hover:scale-[1.02]" />
+            <img src={asset(c.image)} alt={`${c.title} certificate`} loading="lazy" className="mx-auto aspect-[4/3] w-full max-w-lg object-cover shadow-[0_20px_60px_-20px_rgba(0,0,0,0.9)] transition-transform duration-500 hover:scale-[1.02]" />
           </button>
         ) : (
-          <div className="flex aspect-[1.3] w-full flex-col items-center justify-center gap-4 bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--accent)_14%,transparent),transparent_70%)] text-center">
+          <div className="mx-auto flex aspect-[4/3] w-full max-w-lg flex-col items-center justify-center gap-4 bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--accent)_14%,transparent),transparent_70%)] text-center">
             <Logo className="h-14 w-14 text-[var(--accent)] opacity-70" />
             <p className="font-mono text-[10px] tracking-[0.3em] text-dim">CERTIFICATE IMAGE · COMING SOON</p>
           </div>

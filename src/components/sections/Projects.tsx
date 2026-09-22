@@ -1,5 +1,6 @@
 "use client";
 
+import { sound } from "@/lib/sound";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import Section, { SectionHeading } from "../ui/Section";
@@ -67,6 +68,7 @@ export default function Projects() {
         >
           {projects.map((p, i) => (
             <li
+              onMouseEnter={() => sound.cardHover()}
               key={p.slug}
               className="hud-panel group flex w-[84vw] max-w-[420px] shrink-0 snap-center flex-col sm:w-[380px] lg:w-[400px]"
               style={{ "--accent": p.color } as React.CSSProperties}

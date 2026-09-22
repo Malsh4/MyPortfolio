@@ -84,6 +84,51 @@ body {
   clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
 }
 
+/* Hover for panels: lift, brighten the frame, a soft inner glow, and a light scan sweeping down once. */
+.hud-hover {
+  /* `translate`, not `transform`: reveal animations leave an inline transform on these panels (and GSAP writes an
+     inline `translate: none`, hence the !important on hover) */
+  transition:
+    translate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.4s ease,
+    background 0.4s ease;
+}
+.hud-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 16%, transparent) 50%, transparent);
+  background-size: 100% 45%;
+  background-repeat: no-repeat;
+  background-position: 0 -120%;
+  opacity: 0;
+}
+.hud-hover:hover {
+  translate: 0 -4px !important;
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%),
+    linear-gradient(160deg, rgba(24, 20, 44, 0.8), rgba(8, 8, 18, 0.7));
+}
+.hud-hover:hover::after {
+  opacity: 1;
+  background-position: 0 260%;
+  transition:
+    background-position 0.9s ease-out,
+    opacity 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-hover,
+  .hud-hover:hover {
+    translate: none !important;
+  }
+  .hud-hover:hover::after {
+    transition: none;
+    opacity: 0;
+  }
+}
+
 .hud-panel::before {
   content: "";
   position: absolute;

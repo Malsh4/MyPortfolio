@@ -15,6 +15,8 @@ export default function HashScroll() {
       ScrollTrigger.refresh();
       if (id) scrollToId(id, true);
       else scrollToTop(true);
+      // Use the hash once, then drop it from the address bar so a refresh starts from the top again.
+      if (window.location.hash) window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
     };
     // Second pass corrects for pin spacers and reveal layouts that settle after the first frame.
     const timers = [setTimeout(jump, 120), setTimeout(jump, 700)];

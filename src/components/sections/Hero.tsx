@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import Section from "../ui/Section";
 import { HudButton } from "../ui/HudButton";
 import { IconDownload, IconGithub, IconLinkedin, IconMail } from "../ui/Icons";
-import { certificates, profile, projects } from "@/data/content";
+import { profile, projects } from "@/data/content";
 import { asset } from "@/lib/asset";
 import { gsap } from "@/lib/gsap";
 import { scrollToId } from "@/lib/scroll";
@@ -133,14 +133,9 @@ export default function Hero() {
   const ref = useRef<HTMLDivElement>(null);
   const featured = projects.find((p) => p.slug === profile.featuredProject) ?? projects[0];
   const socials = [
-    { href: profile.github, label: "GitHub", Icon: IconGithub },
-    { href: profile.linkedin, label: "LinkedIn", Icon: IconLinkedin },
-    { href: `mailto:${profile.email}`, label: "Email", Icon: IconMail },
-  ];
-  const counters = [
-    { v: String(projects.length).padStart(2, "0"), k: "PROJ" },
-    { v: String(certificates.length).padStart(2, "0"), k: "CERT" },
-    { v: "1+", k: "EXP" },
+    { href: profile.github, label: "GitHub", value: profile.github.replace("https://", ""), Icon: IconGithub },
+    { href: profile.linkedin, label: "LinkedIn", value: profile.linkedin.replace("https://www.", ""), Icon: IconLinkedin },
+    { href: `mailto:${profile.email}`, label: "Email", value: profile.email, Icon: IconMail },
   ];
 
   return (
@@ -152,32 +147,33 @@ export default function Hero() {
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-void" aria-hidden="true" />
 
         {/* left social rail */}
-        <ul className="absolute left-6 top-1/2 z-10 hidden -translate-y-1/2 flex-col items-center gap-5 lg:flex">
+        <ul className="absolute left-6 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-5 lg:flex">
           <li className="h-16 w-px bg-white/15" aria-hidden="true" />
-          {socials.map(({ href, label, Icon }) => (
+          {socials.map(({ href, label, value, Icon }) => (
             <li key={label}>
-              <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" aria-label={label} className="text-dim transition-colors hover:text-[var(--accent)]">
-                <Icon />
+              <a
+                href={href}
+                target={href.startsWith("http") ? "_blank" : undefined}
+                rel="noreferrer"
+                aria-label={`${label}: ${value}`}
+                title={value}
+                className="group relative flex items-center text-dim transition-colors hover:text-[var(--accent)] focus-visible:text-[var(--accent)]"
+              >
+                <Icon className="h-6 w-6" />
+                {/* the address slides out beside the icon on hover */}
+                <span className="pointer-events-none absolute left-9 whitespace-nowrap border border-[var(--accent)]/40 bg-void/90 px-2.5 py-1 font-mono text-[10px] tracking-[0.2em] text-text opacity-0 transition-all duration-300 -translate-x-1 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100">
+                  {value}
+                </span>
               </a>
             </li>
           ))}
           <li className="h-16 w-px bg-white/15" aria-hidden="true" />
         </ul>
 
-        {/* right counter rail */}
-        <ul className="absolute right-6 top-1/2 z-10 hidden -translate-y-1/2 flex-col items-center gap-8 xl:flex" aria-label="At a glance">
-          {counters.map((c) => (
-            <li key={c.k} className="flex flex-col items-center gap-2 [writing-mode:vertical-rl]">
-              <span className="font-display text-sm font-bold text-[var(--accent)]">{c.v}</span>
-              <span className="font-mono text-[9px] tracking-[0.35em] text-dim">{c.k}</span>
-            </li>
-          ))}
-        </ul>
-
         <div className="relative z-10 w-full px-5 pb-28 pt-28 sm:px-10 lg:px-24 xl:px-28">
           <p className="hud-label mb-5 flex items-center gap-3">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--accent)]" />
-            <span data-scramble>PORTFOLIO_2026 // SRI LANKA</span>
+            <span data-scramble>SOFTWARE ENGINEER</span>
           </p>
 
           <h1

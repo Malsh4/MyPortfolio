@@ -2,9 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
-import { detectTier, useApp, type Quality } from "@/lib/store";
-import { projects, sectionAccent, type SectionId } from "@/data/content";
+import { useEffect, useRef } from "react";
+import { detectTier, useApp } from "@/lib/store";
+import { projects, sectionAccent, sections, type SectionId } from "@/data/content";
 import { sound } from "@/lib/sound";
 import SmoothScroll from "./SmoothScroll";
 import Preloader from "./Preloader";
@@ -15,7 +15,7 @@ const Scene = dynamic(() => import("./three/Scene"), { ssr: false });
 
 // How much the 3D room is dimmed behind each section: `solid` darkens everything, `side` darkens the text column.
 const SCRIM: Record<SectionId, { solid: number; side: number }> = {
-  hero: { solid: 0.85, side: 0 },
+  hero: { solid: 0, side: 0 }, // the hero is opaque itself; keep the walk in from the door undimmed
   about: { solid: 0.3, side: 0.8 },
   skills: { solid: 0.18, side: 0.75 },
   projects: { solid: 0.28, side: 0.45 },
@@ -29,6 +29,15 @@ function BackdropScrim() {
   const mode = useApp((s) => s.mode);
   const revealActive = useApp((s) => s.revealActive);
   const level = mode !== "home" || revealActive ? { solid: 0, side: 0 } : SCRIM[active];
+  // The room dims as About comes in (a calm, warm swell from the entrance); every other arrival gets a soft chime.
+  const prev = useRef(active);
+  useEffect(() => {
+    if (mode === "home" && prev.current !== active) {
+      if (active === "about" && prev.current === "hero") sound.settle();
+      else sound.sectionChange(sections.findIndex((s) => s.id === active));
+    }
+    prev.current = active;
+  }, [active, mode]);
   return (
     <div className="pointer-events-none fixed inset-0 z-[1]" aria-hidden="true">
       <div className="absolute inset-0 bg-void transition-opacity duration-1000 ease-out" style={{ opacity: level.solid }} />
@@ -48,8 +57,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const q = localStorage.getItem("quality") as Quality | null;
-      if (q) useApp.getState().setQuality(q);
+      // The quality picker was removed, so drop any preset saved by an older visit and let auto-detection decide.
+      localStorage.removeItem("quality");
       if (localStorage.getItem("sound") === "off") {
         useApp.getState().setSoundOn(false);
         sound.setEnabled(false);

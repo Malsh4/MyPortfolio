@@ -1,9 +1,11 @@
 "use client";
 
 import Section, { SectionHeading } from "../ui/Section";
+import { sound } from "@/lib/sound";
 import { achievements, education, experience, languages, profile, stats } from "@/data/content";
 
 export default function About() {
+  const hover = () => sound.cardHover();
   return (
     <Section id="about" label="About me" className="px-5 py-28 sm:px-10 lg:px-16 lg:py-40">
       <div className="mx-auto max-w-7xl">
@@ -24,16 +26,16 @@ export default function About() {
 
             <dl data-reveal className="mt-10 grid grid-cols-2 gap-3 sm:gap-4">
               {stats.map((s) => (
-                <div key={s.label} className="hud-panel flex flex-col-reverse p-5">
-                  <dt className="mt-2 font-mono text-[10px] tracking-[0.2em] text-dim">{s.label.toUpperCase()}</dt>
-                  <dd className="font-display text-3xl font-black text-[var(--accent)] glow-text sm:text-4xl">{s.value}</dd>
+                <div key={s.label} onMouseEnter={hover} className="hud-panel hud-hover group flex flex-col-reverse p-5">
+                  <dt className="mt-2 font-mono text-[10px] tracking-[0.2em] text-dim transition-colors group-hover:text-text">{s.label.toUpperCase()}</dt>
+                  <dd className="font-display text-3xl font-black text-[var(--accent)] glow-text transition-transform duration-500 group-hover:translate-x-1 sm:text-4xl">{s.value}</dd>
                 </div>
               ))}
             </dl>
           </div>
 
           <div className="flex flex-col gap-6 lg:pt-40">
-            <article data-reveal className="hud-panel p-6 sm:p-8">
+            <article data-reveal onMouseEnter={hover} className="hud-panel hud-hover group p-6 sm:p-8">
               <p className="hud-label mb-5">EXPERIENCE.LOG</p>
               {experience.map((job) => (
                 <div key={job.company}>
@@ -44,8 +46,8 @@ export default function About() {
                   <p className="mt-1 text-[var(--accent)]">{job.company}</p>
                   <ul className="mt-4 space-y-2.5">
                     {job.points.map((p) => (
-                      <li key={p} className="flex gap-3 text-sm leading-relaxed text-text/75">
-                        <span className="mt-2 h-1 w-1 shrink-0 rotate-45 bg-[var(--accent)]" />
+                      <li key={p} className="flex gap-3 text-sm leading-relaxed text-text/75 transition-colors hover:text-text">
+                        <span className="mt-2 h-1 w-1 shrink-0 rotate-45 bg-[var(--accent)] transition-shadow group-hover:shadow-[0_0_8px_var(--accent)]" />
                         {p}
                       </li>
                     ))}
@@ -54,7 +56,7 @@ export default function About() {
               ))}
             </article>
 
-            <article data-reveal className="hud-panel p-6 sm:p-8">
+            <article data-reveal onMouseEnter={hover} className="hud-panel hud-hover group p-6 sm:p-8">
               <p className="hud-label mb-5">EDUCATION.DAT</p>
               <ul className="space-y-5">
                 {education.map((e) => (
@@ -79,9 +81,9 @@ export default function About() {
           </p>
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {achievements.map((a, i) => (
-              <li key={a.title} data-reveal data-delay={String(i * 0.08)} className="hud-panel group p-6 transition-transform duration-500 hover:-translate-y-1">
+              <li key={a.title} data-reveal data-delay={String(i * 0.08)} onMouseEnter={hover} className="hud-panel hud-hover group p-6">
                 <span className="font-mono text-[10px] tracking-[0.3em] text-[var(--accent)]">{`0${i + 1}`}</span>
-                <h3 className="mt-3 font-display text-base font-bold leading-snug text-text">{a.title}</h3>
+                <h3 className="mt-3 font-display text-base font-bold leading-snug text-text transition-colors group-hover:text-[var(--accent)]">{a.title}</h3>
                 <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.15em] text-dim">{a.org}</p>
                 <p className="mt-3 text-sm leading-relaxed text-text/70">{a.text}</p>
               </li>
